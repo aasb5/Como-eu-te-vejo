@@ -1,42 +1,6 @@
-const daysInYear = 365;
-const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+// Existing code...
 
-const timeline = document.querySelector(".timeline");
-const marker = document.querySelector(".marker");
-const tooltip = document.querySelector(".tooltip");
-const images = document.querySelectorAll('.zodiac-image');
-
-function dayToMonthDay(dayOfYear) {
-  let dayCount = 0;
-  for (let i = 0; i < daysInMonth.length; i++) {
-    if (dayOfYear <= dayCount + daysInMonth[i]) {
-      const day = dayOfYear - dayCount;
-      return `${monthNames[i]} ${day}`;
-    }
-    dayCount += daysInMonth[i];
-  }
-  return "Dec 31";
-}
-
-function updateImage(day) {
-  let matched = false;
-
-  images.forEach(img => {
-    const start = parseInt(img.dataset.start);
-    const end = parseInt(img.dataset.end);
-    const inRange = start <= end
-      ? day >= start && day <= end
-      : day >= start || day <= end;
-
-    img.classList.toggle('active', inRange);
-    if (inRange) matched = true;
-  });
-
-  if (!matched) {
-    console.warn("No zodiac matched for day:", day);
-  }
-}
+let isDragging = false;
 
 function updateMarker(positionX) {
   const rect = timeline.getBoundingClientRect();
@@ -51,23 +15,32 @@ function updateMarker(positionX) {
   updateImage(dayOfYear);
 }
 
+// Mouse events
 timeline.addEventListener('click', (e) => updateMarker(e.clientX));
 
-let isDragging = false;
-
-marker.addEventListener('mousedown', () => {
-  isDragging = true;
-  document.body.style.userSelect = 'none';
-});
-
-window.addEventListener('mouseup', () => {
-  isDragging = false;
-  document.body.style.userSelect = '';
-});
-
+marker.addEventListener('mousedown', () => isDragging = true);
+window.addEventListener('mouseup', () => isDragging = false);
 window.addEventListener('mousemove', (e) => {
+  if (isDragging) updateMarker(e.clientX);
+});
+
+// Touch events
+timeline.addEventListener('touchstart', (e) => {
+  e.preventDefault();  // Prevent scrolling
+  const touch = e.touches[0];
+  updateMarker(touch.clientX);
+  isDragging = true;
+});
+
+window.addEventListener('touchend', () => {
+  isDragging = false;
+});
+
+window.addEventListener('touchmove', (e) => {
   if (isDragging) {
-    updateMarker(e.clientX);
+    e.preventDefault();  // Prevent scrolling
+    const touch = e.touches[0];
+    updateMarker(touch.clientX);
   }
 });
 
@@ -79,11 +52,7 @@ window.onload = () => {
   const dayOfYear = Math.floor(diff / oneDay);
 
   const percent = (dayOfYear - 1) / (daysInYear - 1);
-  const positionX = percent * timeline.offsetWidth;
-
-  marker.style.left = `${positionX}px`;
-  tooltip.style.left = `${positionX}px`;
+  marker.style.left = `${percent * timeline.offsetWidth}px`;
   tooltip.innerText = dayToMonthDay(dayOfYear);
-
   updateImage(dayOfYear);
 };
